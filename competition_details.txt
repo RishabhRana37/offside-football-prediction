@@ -1,0 +1,81 @@
+Competition Name: Offside - Football Analytics Datathon
+Objective: Predict football-related outcomes using machine learning and data analytics. Specifically, predict the probability (scored_flag) that a player scores at least one goal during a match, using player profiles, market intelligence, match context, participation information, and advanced football analytics features.
+
+Evaluation Metric: Average Precision (AP)
+
+Target Variable: scored_flag (0 = player did not score, 1 = player scored at least one goal)
+
+Rules:
+- Entry/timeline: Start Date: 06/06/2026 10:00 AM IST, End Date: 06/06/2026 10:00 PM IST (12 hours duration).
+- Team limits: Maximum team size of two (2). Team mergers allowed up to merger deadline.
+- Submission limits: Maximum of five (5) submissions per day. Up to two (2) final submissions can be selected for judging.
+- External data: Allowed if public and equally accessible to use by all participants at no cost, or if it satisfies the Reasonableness Standard (minimal cost, e.g. Gemini Advanced subscription is ok, proprietary dataset exceeding prize cost is not).
+- Prizes: Total prize pool of ₹5,000 (First Prize: ₹2,500, Second Prize: ₹1,500, Third Prize: ₹1,000).
+- Code requirements: Teams must write their own data cleaning, feature engineering, and model training code from scratch. Automated pipeline builders of any kind are not permitted. Use of Cloud AI Services (Google Vertex AI, AWS SageMaker Autopilot, Azure Automated ML) is prohibited.
+
+Files in the Dataset:
+1. train.csv: Training dataset containing all features along with the target variable (scored_flag).
+2. test.csv: Testing dataset containing all features except the target variable.
+3. sample_submission.csv: Sample submission file demonstrating the expected submission format (appearance_id,scored_flag).
+4. data_dictionary.csv: Detailed description of every attribute included in the dataset.
+5. feature_catalog.csv: Metadata file containing feature groups and feature classifications.
+
+List of columns and their descriptions:
+- appearance_id: Unique identifier corresponding to a player-match appearance.
+- player_name: Full name of the player.
+- date: Date on which the match was played.
+- season: Season during which the match took place.
+- minutes_played: Total minutes played by the player in the match.
+- minutes_ratio: Percentage of total match time played by the player.
+- yellow_cards: Number of yellow cards received by the player.
+- red_cards: Number of red cards received by the player.
+- disciplinary_points: Disciplinary score derived from yellow and red cards.
+- home_club_name: Name of the home team.
+- away_club_name: Name of the away team.
+- attendance: Official attendance recorded for the match.
+- stadium: Venue where the match was played.
+- referee: Match referee.
+- country_name: Country in which the competition was held.
+- competition_type: Type of competition (League, Cup, International, etc.).
+- confederation: Football confederation governing the competition.
+- market_value_before_match: Player's estimated market value before the match.
+- highest_market_value_in_eur: Highest recorded market value achieved by the player.
+- market_value_ratio: Ratio between current and peak market value.
+- log_market_value: Log-transformed market value.
+- value_pct_of_peak: Current market value expressed as a percentage of peak market value.
+- market_value_tier: Categorical market value classification.
+- age: Player age at the time of the match.
+- age_bucket: Age group category.
+- height_in_cm: Player height in centimeters.
+- foot: Preferred foot (Left, Right, Both).
+- position: Primary playing position.
+- sub_position: Detailed playing role.
+- country_of_citizenship: Player nationality.
+- international_caps: Total international appearances.
+- international_goals: Total international goals scored.
+- goal_per_cap: Goals scored per international appearance.
+- has_national_team_experience: Indicator of international playing experience.
+- avg_xG: Average Expected Goals (xG).
+- avg_xA: Average Expected Assists (xA).
+- avg_shots: Average shots per match.
+- avg_key_passes: Average key passes per match.
+- avg_xGChain: Average contribution to attacking sequences ending in shots.
+- avg_xGBuildup: Average contribution to build-up play.
+- avg_npxG: Average Non-Penalty Expected Goals.
+- xG_to_xA_ratio: Ratio of attacking to creative contribution.
+- has_understat: Indicator showing availability of advanced analytics.
+- analytics_coverage_flag: Indicator showing advanced analytics coverage.
+- starter_flag: Indicates whether the player started the match.
+- substitute_flag: Indicates whether the player entered as a substitute.
+- full_match_flag: Indicates whether the player completed the full match.
+- card_flag: Indicates whether the player received a card.
+- goal_diff_abs: Absolute goal difference in the match.
+- prime_age_flag: Indicates whether the player is within the typical peak-performance age range.
+- veteran_flag: Indicates whether the player is classified as a veteran player.
+- finisher_flag: Indicates a strong goal-scoring profile based on historical performance.
+- creative_player_flag: Indicates a strong chance-creation profile.
+- is_goalkeeper: Position indicator for goalkeepers.
+- is_defender: Position indicator for defenders.
+- is_midfielder: Position indicator for midfielders.
+- is_attacker: Position indicator for attackers.
+- scored_flag: Target Variable — indicates whether the player scored at least one goal in the match.
