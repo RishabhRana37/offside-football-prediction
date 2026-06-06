@@ -4,7 +4,7 @@ An end-to-end, grandmaster-level machine learning pipeline built for the **Offsi
 
 The task is to predict the probability that a player will score at least one goal in a given match (`scored_flag`), optimizing for the **Average Precision (AP)** metric.
 
-## 📈 Model Performance & Validation
+##  Model Performance & Validation
 We used **Stratified 5-Fold Cross Validation** on the 1.3 million row training set to validate model performance:
 * **LightGBM Classifier**: Mean Out-of-Fold (OOF) AP = **0.4090**
 * **CatBoost Classifier**: Mean Out-of-Fold (OOF) AP = **0.4498**
@@ -12,7 +12,7 @@ We used **Stratified 5-Fold Cross Validation** on the 1.3 million row training s
 
 ---
 
-## 📁 Repository Structure
+## Repository Structure
 ```text
 ├── src/
 │   ├── eda.py          # Exploratory Data Analysis & plotting functions
@@ -26,7 +26,7 @@ We used **Stratified 5-Fold Cross Validation** on the 1.3 million row training s
 
 ---
 
-## 🛠️ Feature Engineering & Preprocessing
+##  Feature Engineering & Preprocessing
 * **Temporal Context**: Parses match dates into year, month, day of week, day of year, and weekend flags.
 * **Football Domain Ratios**: Scales player average expected goals (`avg_xG`) and expected assists (`avg_xA`) by match minutes played, and computes international caps scoring efficiency.
 * **Robust Target Encoding**: Performs out-of-fold target encoding for players (`name_y`) and clubs (`home_club_name`, `away_club_name`) to prevent data leakage.
@@ -34,7 +34,7 @@ We used **Stratified 5-Fold Cross Validation** on the 1.3 million row training s
 
 ---
 
-## 🚀 Getting Started & Execution
+##  Getting Started & Execution
 
 1. **Set up the virtual environment & install dependencies**:
    ```bash
