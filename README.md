@@ -6,7 +6,7 @@ The task is to predict the probability that a football player will score at leas
 
 ---
 
-## 🏆 Model Performance & Validation
+##  Model Performance & Validation
 We evaluate model performance using **Stratified 5-Fold Cross Validation** on the training dataset:
 
 | Model Configuration | Validation Setup | Mean Out-of-Fold (OOF) AP |
@@ -26,7 +26,7 @@ We evaluate model performance using **Stratified 5-Fold Cross Validation** on th
 
 ---
 
-## 📂 Repository Structure
+##  Repository Structure
 
 ```text
 ├── src/
@@ -55,7 +55,7 @@ We evaluate model performance using **Stratified 5-Fold Cross Validation** on th
 
 ---
 
-## 🚀 Getting Started & Setup
+##  Getting Started & Setup
 
 ### 1. Environment and Dependencies
 Set up your virtual environment and install the required libraries:
