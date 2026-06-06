@@ -338,13 +338,31 @@ with tab_batch:
                     
                     # Convert to CSV for download
                     csv_data = results_df.to_csv(index=False).encode('utf-8')
-                    st.download_button(
-                        label="📥 Download Predictions CSV",
-                        data=csv_data,
-                        file_name="offside_batch_predictions.csv",
-                        mime="text/csv",
-                        use_container_width=True
-                    )
+                    
+                    # Create Kaggle solution-formatted CSV (only appearance_id and scored_flag)
+                    kaggle_df = pd.DataFrame({
+                        'appearance_id': results_df['appearance_id'],
+                        'scored_flag': results_df['scored_probability']
+                    })
+                    kaggle_csv_data = kaggle_df.to_csv(index=False).encode('utf-8')
+                    
+                    col_dl1, col_dl2 = st.columns(2)
+                    with col_dl1:
+                        st.download_button(
+                            label="📥 Download Full Predictions CSV",
+                            data=csv_data,
+                            file_name="offside_batch_predictions.csv",
+                            mime="text/csv",
+                            use_container_width=True
+                        )
+                    with col_dl2:
+                        st.download_button(
+                            label="🎯 Download Kaggle Solution CSV",
+                            data=kaggle_csv_data,
+                            file_name="solution.csv",
+                            mime="text/csv",
+                            use_container_width=True
+                        )
         except Exception as e:
             st.error(f"Error reading file or generating predictions: {str(e)}")
 
