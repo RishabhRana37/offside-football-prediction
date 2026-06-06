@@ -3,8 +3,9 @@ import numpy as np
 from sklearn.preprocessing import LabelEncoder
 
 class FeaturePipeline:
-    def __init__(self, random_state=42):
+    def __init__(self, random_state=42, m=10):
         self.random_state = random_state
+        self.m = m
         self.cat_cols = [
             'foot', 'position', 'sub_position', 'country_of_citizenship',
             'home_club_name', 'away_club_name', 'stadium', 'referee',
@@ -70,13 +71,15 @@ class FeaturePipeline:
                 df[col] = le.fit_transform(df[col])
                 self.label_encoders[col] = le
 
-        # 4. Target Encoding Baseline (Global Means for fallback)
+        # 4. Target Encoding Baseline (Global Means for fallback with smoothing)
         if target_col in train_df.columns:
-            # We save the global mean target encoding for players, clubs, and positions
-            self.global_target_means['name_y'] = train_df.groupby('name_y')[target_col].mean().to_dict()
-            self.global_target_means['home_club_name'] = train_df.groupby('home_club_name')[target_col].mean().to_dict()
-            self.global_target_means['away_club_name'] = train_df.groupby('away_club_name')[target_col].mean().to_dict()
-            self.global_target_means['global_mean'] = train_df[target_col].mean()
+            global_mean = train_df[target_col].mean()
+            self.global_target_means['global_mean'] = global_mean
+            for col in ['name_y', 'home_club_name', 'away_club_name']:
+                if col in train_df.columns:
+                    stats = train_df.groupby(col)[target_col].agg(['sum', 'count'])
+                    smoothed_means = (stats['sum'] + self.m * global_mean) / (stats['count'] + self.m)
+                    self.global_target_means[col] = smoothed_means.to_dict()
 
         return df
 
@@ -206,7 +209,7 @@ class FeaturePipeline:
         return df
 
 
-def generate_out_of_fold_target_encoding(train_df, kfold, target_col='scored_flag', cols_to_encode=['name_y', 'home_club_name', 'away_club_name']):
+def generate_out_of_fold_target_encoding(train_df, kfold, target_col='scored_flag', cols_to_encode=['name_y', 'home_club_name', 'away_club_name'], m=10):
     """
     Computes out-of-fold target encoding for high cardinality features to prevent target leakage.
     """
@@ -222,8 +225,9 @@ def generate_out_of_fold_target_encoding(train_df, kfold, target_col='scored_fla
         val_fold = train_df.iloc[val_idx]
         
         for col in cols_to_encode:
-            # Calculate target encoding on training fold
-            col_means = train_fold.groupby(col)[target_col].mean()
+            # Calculate smoothed target encoding on training fold
+            stats = train_fold.groupby(col)[target_col].agg(['sum', 'count'])
+            col_means = (stats['sum'] + m * global_mean) / (stats['count'] + m)
             # Map to validation fold
             encoded_train.iloc[val_idx, encoded_train.columns.get_loc(f'{col}_target_enc')] = val_fold[col].map(col_means).fillna(global_mean)
             

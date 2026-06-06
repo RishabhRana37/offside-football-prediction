@@ -1,6 +1,21 @@
-*.csv
+# Large Datasets
+train.csv
+train_cleaned.csv
+train_original_backup.csv
+test.csv
+test_cleaned.csv
+sample_submission.csv
+submission.csv
+
+# Python & Environment
 .venv/
 __pycache__/
 *.pyc
 .DS_Store
+.ipynb_checkpoints/
+scratch/
+
+# Model Checkpoints & Large Binaries
+*.pkl
+*.cbm
 catboost_info/

@@ -308,5 +308,8 @@ def blend_predictions(oof_lgb, oof_cat, test_lgb, test_cat, y_train):
     print(f"Optimal Blending Weight: LGBM = {best_weight:.2f}, CatBoost = {1 - best_weight:.2f}")
     print(f"Ensemble OOF Average Precision: {best_score:.4f}")
     
+    # Recalculate blend_oof using the optimal weight
+    blend_oof = best_weight * oof_lgb + (1 - best_weight) * oof_cat
     blend_test = best_weight * test_lgb + (1 - best_weight) * test_cat
     return blend_oof, blend_test, best_weight
+

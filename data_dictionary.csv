@@ -1,0 +1,65 @@
+attribute,dtype,description
+appearance_id,object,Unique player-match appearance identifier
+date,object,Match date
+season,int64,Football season
+minutes_played,int64,Minutes played in the match
+yellow_cards,int64,Number of yellow cards received
+red_cards,int64,Number of red cards received
+disciplinary_points,int64,Disciplinary score derived from cards
+home_club_id,int64,No description available
+away_club_id,int64,No description available
+home_club_name,object,Home team
+away_club_name,object,Away team
+home_club_goals,int64,No description available
+away_club_goals,int64,No description available
+home_away,object,No description available
+attendance,float64,Match attendance
+stadium,object,Match venue
+referee,object,Match referee
+name_x,object,No description available
+country_name,object,Country where competition takes place
+competition_type,object,Competition category
+confederation,object,Football confederation
+market_value_before_match,float64,Player market value before match
+age,float64,Player age
+height_in_cm,float64,Player height in centimeters
+foot,object,Preferred foot
+position,object,Primary playing position
+sub_position,object,Detailed playing position
+country_of_citizenship,object,Player nationality
+international_caps,float64,National team appearances
+international_goals,float64,National team goals
+highest_market_value_in_eur,float64,Highest recorded player market value
+market_value_ratio,float64,Current value divided by peak value
+avg_xG,float64,Average expected goals
+avg_xA,float64,Average expected assists
+avg_shots,float64,Average shots per match
+avg_key_passes,float64,Average key passes per match
+avg_xGChain,float64,Average xG chain contribution
+avg_xGBuildup,float64,Average xG buildup contribution
+avg_npxG,float64,Average non-penalty expected goals
+has_understat,bool,Advanced analytics available
+log_market_value,float64,Log-transformed market value
+value_pct_of_peak,float64,Current value as percentage of peak value
+market_value_tier,object,Market value category
+minutes_ratio,float64,Minutes played divided by full match duration
+full_match_flag,bool,Played full match
+starter_flag,bool,Started the match
+substitute_flag,bool,Entered as substitute
+scored_flag,bool,"Target variable. 1 if player scored, else 0"
+card_flag,bool,Received at least one card
+goal_diff_abs,int64,Absolute goal difference
+age_bucket,object,Age category
+prime_age_flag,bool,Player in prime age range
+veteran_flag,bool,Player classified as veteran
+goal_per_cap,float64,International goals per appearance
+has_national_team_experience,bool,Indicator for international experience
+xG_to_xA_ratio,float64,Ratio of xG to xA
+finisher_flag,bool,Strong goal-scoring profile
+creative_player_flag,bool,Strong creative profile
+analytics_coverage_flag,bool,Advanced analytics coverage indicator
+is_goalkeeper,bool,Goalkeeper position indicator
+is_defender,bool,Defender position indicator
+is_midfielder,bool,Midfielder position indicator
+is_attacker,bool,Attacker position indicator
+name_y,object,No description available
