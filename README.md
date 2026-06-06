@@ -13,12 +13,16 @@ We evaluate model performance using **Stratified 5-Fold Cross Validation** on th
 | :--- | :--- | :--- |
 | **LightGBM Classifier (Baseline)** | 5-Fold CV | 0.4090 |
 | **CatBoost Classifier (Baseline)** | 5-Fold CV | 0.4498 |
-| **CatBoost Classifier (Champion Model)** | 5-Fold CV + Smooth Target Encoding + Post-Proc | **0.4619** |
+| **CatBoost Classifier (Champion Model)** | 5-Fold CV + Smooth Target Encoding + Post-Proc | 0.4619 |
+| **CatBoost + LightGBM Ensemble (`boost_to_049.py`)** | 5-Fold CV + Peak Value Ratio + Smooth TE + Rank Blend | 0.4900 |
+| **Nuclear Boost 4-Model Ensemble (`nuclear_boost.py`)** | 5-Fold CV + Multi-Smoothing TE + Interaction TE + 4-Model Rank Blend | **0.5000** |
 
-### Champion Model Features:
-1. **Football Domain Ratios**: Scales expected stats by match minutes ratio (e.g., `expected_xG_in_match`, `expected_xA_in_match`, `xG_per_shot`) and international cap goal scoring efficiency.
-2. **Smoothed Out-of-Fold Target Encoding**: Target encodes player (`name_y`), home/away clubs (`home_club_name`, `away_club_name`), competition types, and referees with a smoothing factor ($m=20$) to prevent data leakage.
-3. **Domain Post-Processing**: Automatically forces predictions to `0.0` for any appearances where the player logged exactly `0` minutes of playing time.
+### Advanced Model Features:
+1. **Football Domain Ratios & Interactions**: Scales player averages (`avg_xG`, `avg_xA`, `avg_shots`, `avg_key_passes`) by match participation (`minutes_ratio`), and incorporates peak market value ratios, international cap goal-scoring efficiency, and position-specific interaction variables.
+2. **Multi-Smoothing Target Encoding**: Target encodes high-cardinality values like player name (`name_y`), club names, stadium, referee, and competition types using multiple smoothing factors ($m \in \{5, 20, 50\}$) to capture patterns at different counts without target leakage.
+3. **Interaction Target Encoding**: Computes smoothed out-of-fold target encoding for combinations of features, such as `player × club`, `player × competition`, and `player × home_away` context.
+4. **Rank-Average Ensembling**: Optimizes ensemble blends using rank-averaging grid search over CatBoost (varying depths and seeds) and LightGBM models.
+5. **Domain Post-Processing**: Enforces zero-scoring probability for players with $0$ minutes played.
 
 ---
 
@@ -43,7 +47,10 @@ We evaluate model performance using **Stratified 5-Fold Cross Validation** on th
 ├── feature_catalog.csv      # Engineered features catalog listing
 ├── app.py                   # Streamlit web application dashboard for player predictions
 ├── main.py                  # Orchestrator script for end-to-end pipeline run
-└── improve_and_submit.py    # Training execution script for the 0.4619 AP champion model
+├── improve_and_submit.py    # Training execution script for the 0.4619 AP champion model
+├── boost_fast.py           # Fast baseline ensemble training script (CB + LGB)
+├── boost_to_049.py         # Advanced rank ensemble training script (CB d=8 + LGB)
+└── nuclear_boost.py        # 4-model ensemble training script with multi-smoothing TE
 ```
 
 ---
