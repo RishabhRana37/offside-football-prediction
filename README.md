@@ -21,7 +21,6 @@ We used **Stratified 5-Fold Cross Validation** on the 1.3 million row training s
 │   └── explain.py      # SHAP analysis and feature importance plotting
 ├── plots/              # Visualizations (Target distribution, SHAP summary, feature importances)
 ├── main.py             # End-to-end pipeline orchestrator
-├── notebook.ipynb      # Step-by-step Jupyter Notebook wrapper
 └── unzip_and_run.py    # Auto-extraction & execution script
 ```
 
@@ -40,16 +39,14 @@ We used **Stratified 5-Fold Cross Validation** on the 1.3 million row training s
 1. **Set up the virtual environment & install dependencies**:
    ```bash
    python3 -m venv .venv
-   source .venv/bin/env/activate  # On macOS/Linux
-   pip install pandas numpy scikit-learn lightgbm catboost optuna shap matplotlib seaborn notebook
+   source .venv/bin/activate  # On macOS/Linux
+   pip install pandas numpy scikit-learn lightgbm catboost optuna shap matplotlib seaborn
    ```
 
 2. **Download dataset**:
    Download the competition files (`train.csv`, `test.csv`, etc.) from [Kaggle](https://www.kaggle.com/competitions/offside-data-thon/data) and place them in the root of the project.
 
 3. **Run the pipeline**:
-   * **Via CLI**:
-     ```bash
-     python main.py
-     ```
-   * **Via Jupyter**: Open `notebook.ipynb` to step through the code and visualize plots interactively.
+   ```bash
+   python main.py
+   ```
