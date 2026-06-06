@@ -1,0 +1,1466 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>OFF SIDE — Football Goal Prediction AI</title>
+  <meta name="description" content="AI-powered football goal prediction platform. Predict player scoring probability with state-of-the-art machine learning using xG, market value, and match context." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --green: #00ff88;
+      --green-dim: #00cc6a;
+      --green-glow: rgba(0,255,136,0.18);
+      --blue: #0ea5e9;
+      --purple: #a855f7;
+      --bg-dark: #060a0f;
+      --bg-card: rgba(255,255,255,0.03);
+      --bg-card-hover: rgba(255,255,255,0.06);
+      --border: rgba(255,255,255,0.08);
+      --border-green: rgba(0,255,136,0.25);
+      --text-primary: #f0f6fc;
+      --text-secondary: #8b949e;
+      --text-muted: #484f58;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg-dark);
+      color: var(--text-primary);
+      overflow-x: hidden;
+      cursor: none;
+    }
+
+    /* ── CUSTOM CURSOR ── */
+    * { cursor: none !important; }
+    .cursor-dot {
+      position: fixed; top: 0; left: 0;
+      pointer-events: none; z-index: 9999;
+      width: 10px; height: 10px; border-radius: 50%;
+      background: var(--green);
+      transform: translate(-50%, -50%);
+      box-shadow:
+        0 0 8px 2px var(--green),
+        0 0 20px 4px rgba(0,255,136,0.55),
+        0 0 40px 8px rgba(0,255,136,0.2);
+      transition: width .15s, height .15s, box-shadow .2s;
+      will-change: left, top;
+    }
+    .cursor-dot.hovered {
+      width: 16px; height: 16px;
+      box-shadow:
+        0 0 12px 4px var(--green),
+        0 0 32px 8px rgba(0,255,136,0.6),
+        0 0 60px 16px rgba(0,255,136,0.25);
+    }
+    .cursor-ring {
+      position: fixed; top: 0; left: 0;
+      pointer-events: none; z-index: 9998;
+      width: 40px; height: 40px; border-radius: 50%;
+      border: 1.5px solid rgba(0,255,136,0.5);
+      transform: translate(-50%, -50%);
+      transition: width .25s, height .25s, border-color .25s;
+      box-shadow: 0 0 12px rgba(0,255,136,0.15), inset 0 0 8px rgba(0,255,136,0.05);
+      will-change: left, top;
+    }
+    .cursor-ring.hovered {
+      width: 60px; height: 60px;
+      border-color: rgba(0,255,136,0.8);
+      box-shadow: 0 0 20px rgba(0,255,136,0.25), inset 0 0 12px rgba(0,255,136,0.08);
+    }
+    /* Trail canvas sits above particles but below UI */
+    #trailCanvas {
+      position: fixed; inset: 0;
+      pointer-events: none; z-index: 9997;
+    }
+
+    /* ── SPLASH / ENTRY ANIMATION ── */
+    #splash {
+      position: fixed; inset: 0; z-index: 10000;
+      background: var(--bg-dark);
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      gap: 24px;
+      transition: opacity .7s ease, visibility .7s ease;
+    }
+    #splash.hidden { opacity: 0; visibility: hidden; }
+
+    .splash-logo-wrap {
+      position: relative;
+      animation: splashLogoIn .8s cubic-bezier(.16,1,.3,1) both;
+    }
+    .splash-logo-circle {
+      width: 90px; height: 90px; border-radius: 50%;
+      border: 2px solid var(--border-green);
+      display: flex; align-items: center; justify-content: center;
+      position: relative;
+      background: radial-gradient(circle at 50% 50%, rgba(0,255,136,0.07), transparent 70%);
+    }
+    .splash-logo-circle::before {
+      content: '';
+      position: absolute; inset: -6px; border-radius: 50%;
+      border: 1px solid rgba(0,255,136,0.12);
+      animation: spinRing 3s linear infinite;
+    }
+    .splash-logo-circle::after {
+      content: '';
+      position: absolute; inset: -14px; border-radius: 50%;
+      border: 1px dashed rgba(0,255,136,0.07);
+      animation: spinRing 8s linear infinite reverse;
+    }
+    @keyframes spinRing {
+      to { transform: rotate(360deg); }
+    }
+    .splash-icon {
+      font-size: 36px; line-height: 1;
+      filter: drop-shadow(0 0 12px rgba(0,255,136,0.6));
+    }
+
+    .splash-wordmark {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 32px; font-weight: 700; letter-spacing: -0.04em;
+      background: linear-gradient(135deg, #fff 30%, var(--green));
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      background-clip: text;
+      animation: splashWordIn .8s .15s cubic-bezier(.16,1,.3,1) both;
+    }
+    .splash-tagline {
+      font-size: 13px; font-weight: 400; letter-spacing: .12em;
+      text-transform: uppercase; color: var(--text-secondary);
+      animation: splashFadeIn .6s .4s ease both;
+    }
+
+    .splash-progress {
+      width: 180px; height: 2px;
+      background: var(--border);
+      border-radius: 99px; overflow: hidden;
+      animation: splashFadeIn .4s .5s ease both;
+    }
+    .splash-progress-bar {
+      height: 100%; width: 0%;
+      background: linear-gradient(90deg, var(--green), var(--blue));
+      border-radius: 99px;
+      animation: progressFill 1.6s .5s cubic-bezier(.4,0,.2,1) forwards;
+    }
+    @keyframes progressFill { to { width: 100%; } }
+
+    @keyframes splashLogoIn {
+      from { opacity: 0; transform: scale(.7) translateY(20px); }
+      to { opacity: 1; transform: scale(1) translateY(0); }
+    }
+    @keyframes splashWordIn {
+      from { opacity: 0; transform: translateY(12px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes splashFadeIn {
+      from { opacity: 0; } to { opacity: 1; }
+    }
+
+    /* ── ANIMATED BACKGROUND GRID ── */
+    .bg-grid {
+      position: fixed; inset: 0; pointer-events: none; z-index: 0;
+      background-image:
+        linear-gradient(rgba(0,255,136,0.025) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0,255,136,0.025) 1px, transparent 1px);
+      background-size: 60px 60px;
+      mask-image: radial-gradient(ellipse 80% 80% at 50% 50%, black 30%, transparent 100%);
+    }
+
+    /* ── FLOATING PARTICLES ── */
+    .particles-canvas {
+      position: fixed; inset: 0; pointer-events: none; z-index: 0;
+    }
+
+    /* ── ORBS / GLOW BLOBS ── */
+    .orb {
+      position: fixed; border-radius: 50%;
+      pointer-events: none; z-index: 0;
+      filter: blur(100px);
+    }
+    .orb-1 {
+      width: 500px; height: 500px;
+      background: radial-gradient(circle, rgba(0,255,136,0.08) 0%, transparent 70%);
+      top: -150px; right: -100px;
+      animation: orbFloat 12s ease-in-out infinite;
+    }
+    .orb-2 {
+      width: 400px; height: 400px;
+      background: radial-gradient(circle, rgba(14,165,233,0.07) 0%, transparent 70%);
+      bottom: 20%; left: -100px;
+      animation: orbFloat 15s ease-in-out infinite reverse;
+    }
+    .orb-3 {
+      width: 350px; height: 350px;
+      background: radial-gradient(circle, rgba(168,85,247,0.06) 0%, transparent 70%);
+      top: 55%; right: 10%;
+      animation: orbFloat 10s ease-in-out infinite 3s;
+    }
+    @keyframes orbFloat {
+      0%,100% { transform: translate(0,0) scale(1); }
+      33% { transform: translate(30px,-20px) scale(1.05); }
+      66% { transform: translate(-20px,15px) scale(.95); }
+    }
+
+    /* ── MAIN WRAPPER ── */
+    .main { position: relative; z-index: 1; }
+
+    /* ── NAVBAR ── */
+    nav {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      padding: 0 40px;
+      display: flex; align-items: center; justify-content: space-between;
+      height: 68px;
+      background: rgba(6,10,15,0.7);
+      backdrop-filter: blur(20px) saturate(150%);
+      border-bottom: 1px solid var(--border);
+      transform: translateY(-100%);
+      animation: navSlideIn .6s 2.2s cubic-bezier(.16,1,.3,1) forwards;
+    }
+    @keyframes navSlideIn { to { transform: translateY(0); } }
+
+    .nav-logo {
+      display: flex; align-items: center; gap: 10px;
+      text-decoration: none;
+    }
+    .nav-logo-badge {
+      width: 32px; height: 32px; border-radius: 8px;
+      background: linear-gradient(135deg, var(--green), #00cc6a);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 16px;
+      box-shadow: 0 0 20px rgba(0,255,136,0.3);
+    }
+    .nav-logo-text {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 18px; font-weight: 700; letter-spacing: -.03em;
+      color: var(--text-primary);
+    }
+    .nav-logo-text span { color: var(--green); }
+
+    .nav-links {
+      display: flex; gap: 36px; list-style: none;
+      font-size: 14px; font-weight: 500;
+    }
+    .nav-links a {
+      color: var(--text-secondary); text-decoration: none;
+      transition: color .2s;
+      position: relative;
+    }
+    .nav-links a::after {
+      content: ''; position: absolute; bottom: -4px; left: 0; right: 0;
+      height: 1px; background: var(--green);
+      transform: scaleX(0); transition: transform .25s;
+    }
+    .nav-links a:hover { color: var(--text-primary); }
+    .nav-links a:hover::after { transform: scaleX(1); }
+
+    .nav-cta {
+      display: flex; align-items: center; gap: 12px;
+    }
+    .btn-ghost {
+      padding: 8px 18px; border-radius: 8px; font-size: 14px; font-weight: 500;
+      border: 1px solid var(--border); background: transparent;
+      color: var(--text-secondary); cursor: pointer; transition: all .2s;
+    }
+    .btn-ghost:hover { border-color: var(--border-green); color: var(--text-primary); }
+    .btn-primary {
+      padding: 8px 20px; border-radius: 8px; font-size: 14px; font-weight: 600;
+      background: var(--green); color: #060a0f; border: none;
+      cursor: pointer; transition: all .25s;
+      box-shadow: 0 0 20px rgba(0,255,136,0.25);
+    }
+    .btn-primary:hover {
+      background: #fff; box-shadow: 0 0 30px rgba(0,255,136,0.4);
+      transform: translateY(-1px);
+    }
+
+    /* ── HERO SECTION ── */
+    .hero {
+      min-height: 100vh;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      padding: 120px 40px 80px;
+      text-align: center;
+      position: relative;
+    }
+
+    .hero-badge {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 6px 14px; border-radius: 99px;
+      border: 1px solid var(--border-green);
+      background: rgba(0,255,136,0.05);
+      font-size: 12px; font-weight: 500; letter-spacing: .06em;
+      color: var(--green); text-transform: uppercase; margin-bottom: 28px;
+      opacity: 0; animation: heroFadeUp .6s 2.3s ease forwards;
+    }
+    .hero-badge-dot {
+      width: 6px; height: 6px; border-radius: 50%;
+      background: var(--green);
+      box-shadow: 0 0 8px var(--green);
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+      0%,100% { opacity: 1; } 50% { opacity: .4; }
+    }
+
+    .hero-title {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: clamp(52px, 8vw, 110px);
+      font-weight: 800; letter-spacing: -.04em; line-height: .95;
+      margin-bottom: 28px;
+      opacity: 0; animation: heroFadeUp .8s 2.4s cubic-bezier(.16,1,.3,1) forwards;
+    }
+    .hero-title .line1 { display: block; color: var(--text-primary); }
+    .hero-title .line2 {
+      display: block;
+      background: linear-gradient(135deg, var(--green) 0%, #00d4ff 50%, var(--purple) 100%);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      background-clip: text;
+      background-size: 200%;
+      animation: gradientShift 4s ease infinite 3.2s;
+    }
+    @keyframes gradientShift {
+      0%,100% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+    }
+
+    .hero-sub {
+      max-width: 560px; font-size: 18px; font-weight: 400;
+      color: var(--text-secondary); line-height: 1.7; margin-bottom: 48px;
+      opacity: 0; animation: heroFadeUp .6s 2.55s ease forwards;
+    }
+
+    .hero-actions {
+      display: flex; gap: 16px; align-items: center;
+      opacity: 0; animation: heroFadeUp .6s 2.7s ease forwards;
+    }
+    .btn-hero-primary {
+      display: flex; align-items: center; gap: 10px;
+      padding: 16px 32px; border-radius: 12px; font-size: 16px; font-weight: 600;
+      background: linear-gradient(135deg, var(--green), #00d4aa);
+      color: #060a0f; border: none; cursor: pointer;
+      box-shadow: 0 0 40px rgba(0,255,136,0.3), 0 4px 24px rgba(0,0,0,.4);
+      transition: all .3s; font-family: 'Inter', sans-serif;
+    }
+    .btn-hero-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 0 60px rgba(0,255,136,0.45), 0 8px 32px rgba(0,0,0,.5);
+    }
+    .btn-hero-secondary {
+      display: flex; align-items: center; gap: 8px;
+      padding: 16px 28px; border-radius: 12px; font-size: 16px; font-weight: 500;
+      background: var(--bg-card); border: 1px solid var(--border);
+      color: var(--text-primary); cursor: pointer; transition: all .3s;
+      font-family: 'Inter', sans-serif;
+      backdrop-filter: blur(10px);
+    }
+    .btn-hero-secondary:hover {
+      border-color: var(--border-green);
+      background: var(--bg-card-hover);
+      transform: translateY(-2px);
+    }
+
+    /* ── ANIMATED STAT TICKER ── */
+    .hero-stats {
+      margin-top: 72px; width: 100%;
+      display: flex; justify-content: center;
+      opacity: 0; animation: heroFadeUp .6s 2.9s ease forwards;
+    }
+    .stats-row {
+      display: flex; gap: 0;
+      border: 1px solid var(--border);
+      border-radius: 16px; overflow: hidden;
+      background: var(--bg-card);
+      backdrop-filter: blur(20px);
+      max-width: 780px; width: 100%;
+    }
+    .stat-item {
+      flex: 1; padding: 24px 32px;
+      border-right: 1px solid var(--border);
+      transition: background .25s;
+    }
+    .stat-item:last-child { border-right: none; }
+    .stat-item:hover { background: var(--bg-card-hover); }
+    .stat-value {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 36px; font-weight: 700; letter-spacing: -.03em;
+      color: var(--green);
+    }
+    .stat-label { font-size: 13px; color: var(--text-secondary); margin-top: 4px; }
+
+    /* ── SCROLL INDICATOR ── */
+    .scroll-hint {
+      position: absolute; bottom: 36px; left: 50%;
+      transform: translateX(-50%);
+      display: flex; flex-direction: column; align-items: center; gap: 8px;
+      opacity: 0; animation: heroFadeUp .5s 3.2s ease forwards;
+      color: var(--text-muted); font-size: 12px; letter-spacing: .1em; text-transform: uppercase;
+    }
+    .scroll-arrow {
+      width: 26px; height: 26px; border-radius: 50%;
+      border: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: center;
+      animation: scrollBounce 2s infinite;
+    }
+    @keyframes scrollBounce {
+      0%,100% { transform: translateY(0); }
+      50% { transform: translateY(6px); }
+    }
+
+    @keyframes heroFadeUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ── SECTION COMMONS ── */
+    section {
+      padding: 100px 40px;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    .section-label {
+      font-size: 12px; font-weight: 600; letter-spacing: .15em;
+      text-transform: uppercase; color: var(--green);
+      margin-bottom: 16px;
+    }
+    .section-title {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: clamp(36px, 5vw, 60px); font-weight: 700;
+      letter-spacing: -.03em; line-height: 1.1;
+      color: var(--text-primary); margin-bottom: 20px;
+    }
+    .section-sub {
+      font-size: 18px; color: var(--text-secondary); line-height: 1.7; max-width: 560px;
+    }
+
+    /* ── REVEAL ON SCROLL ── */
+    .reveal {
+      opacity: 0; transform: translateY(40px);
+      transition: opacity .7s ease, transform .7s ease;
+    }
+    .reveal.visible {
+      opacity: 1; transform: translateY(0);
+    }
+
+    /* ── FEATURES ── */
+    .features-grid {
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px;
+      margin-top: 60px;
+    }
+    .feature-card {
+      padding: 32px; border-radius: 20px;
+      border: 1px solid var(--border);
+      background: var(--bg-card);
+      backdrop-filter: blur(10px);
+      transition: all .35s cubic-bezier(.16,1,.3,1);
+      position: relative; overflow: hidden;
+      cursor: default;
+    }
+    .feature-card::before {
+      content: ''; position: absolute;
+      inset: 0; border-radius: 20px;
+      background: radial-gradient(circle at var(--mx,50%) var(--my,50%),
+        rgba(0,255,136,0.06) 0%, transparent 60%);
+      opacity: 0; transition: opacity .35s;
+    }
+    .feature-card:hover::before { opacity: 1; }
+    .feature-card:hover {
+      border-color: var(--border-green);
+      transform: translateY(-4px);
+      box-shadow: 0 16px 48px rgba(0,0,0,.4), 0 0 40px rgba(0,255,136,0.06);
+    }
+    .feature-icon-wrap {
+      width: 52px; height: 52px; border-radius: 14px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 24px; margin-bottom: 20px;
+      position: relative;
+    }
+    .feature-icon-wrap.green { background: rgba(0,255,136,0.1); }
+    .feature-icon-wrap.blue { background: rgba(14,165,233,0.1); }
+    .feature-icon-wrap.purple { background: rgba(168,85,247,0.1); }
+    .feature-icon-wrap.orange { background: rgba(251,146,60,0.1); }
+    .feature-icon-wrap.red { background: rgba(239,68,68,0.1); }
+    .feature-icon-wrap.cyan { background: rgba(6,182,212,0.1); }
+
+    .feature-title {
+      font-size: 18px; font-weight: 600; color: var(--text-primary); margin-bottom: 10px;
+    }
+    .feature-desc { font-size: 14px; color: var(--text-secondary); line-height: 1.7; }
+
+    /* ── PIPELINE SECTION ── */
+    .pipeline-wrap {
+      margin-top: 64px;
+      display: grid; grid-template-columns: 1fr 1fr; gap: 60px;
+      align-items: center;
+    }
+    .pipeline-visual {
+      position: relative;
+    }
+    .pipeline-card {
+      border-radius: 20px;
+      border: 1px solid var(--border);
+      background: var(--bg-card);
+      backdrop-filter: blur(20px);
+      overflow: hidden;
+    }
+    .pipeline-header {
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; gap: 8px;
+    }
+    .dot { width: 10px; height: 10px; border-radius: 50%; }
+    .dot-red { background: #ff5f57; }
+    .dot-yellow { background: #ffbd2e; }
+    .dot-green { background: var(--green); }
+    .pipeline-body { padding: 20px; font-family: 'Space Grotesk', monospace; font-size: 13px; }
+    .code-line { margin-bottom: 6px; color: var(--text-muted); }
+    .code-line .kw { color: var(--blue); }
+    .code-line .fn { color: var(--green); }
+    .code-line .str { color: #f1903a; }
+    .code-line .num { color: var(--purple); }
+    .code-line .cm { color: var(--text-muted); }
+    .code-line .var { color: #e3b341; }
+
+    .output-wrap {
+      padding: 16px 20px;
+      border-top: 1px solid var(--border);
+      display: flex; align-items: center; gap: 12px;
+    }
+    .output-pill {
+      padding: 6px 16px; border-radius: 8px;
+      font-size: 13px; font-weight: 600;
+      background: rgba(0,255,136,0.12); color: var(--green);
+      border: 1px solid var(--border-green);
+    }
+    .metric-badges { display: flex; gap: 8px; flex-wrap: wrap; }
+    .metric-badge {
+      padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 500;
+      background: rgba(255,255,255,0.04); border: 1px solid var(--border);
+      color: var(--text-secondary);
+    }
+
+    .pipeline-steps { display: flex; flex-direction: column; gap: 20px; }
+    .step-item {
+      display: flex; gap: 16px; align-items: flex-start;
+    }
+    .step-num {
+      width: 36px; height: 36px; border-radius: 10px; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 14px; font-weight: 700;
+      border: 1px solid var(--border);
+      color: var(--text-secondary);
+      background: var(--bg-card);
+    }
+    .step-item.active .step-num {
+      background: rgba(0,255,136,0.1);
+      border-color: var(--border-green);
+      color: var(--green);
+    }
+    .step-content { flex: 1; padding-top: 6px; }
+    .step-title { font-size: 15px; font-weight: 600; color: var(--text-primary); margin-bottom: 4px; }
+    .step-desc { font-size: 13px; color: var(--text-secondary); line-height: 1.6; }
+
+    /* ── ACCURACY SECTION ── */
+    .accuracy-wrap {
+      margin-top: 60px;
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px;
+    }
+    .accuracy-card {
+      padding: 32px; border-radius: 20px;
+      border: 1px solid var(--border);
+      background: var(--bg-card);
+      backdrop-filter: blur(10px);
+      text-align: center; transition: all .3s;
+    }
+    .accuracy-card.champion {
+      border-color: var(--border-green);
+      background: rgba(0,255,136,0.03);
+      position: relative;
+    }
+    .champion-badge {
+      position: absolute; top: -12px; left: 50%; transform: translateX(-50%);
+      padding: 4px 14px; border-radius: 99px;
+      background: var(--green); color: #060a0f;
+      font-size: 11px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase;
+    }
+    .accuracy-card:hover { transform: translateY(-4px); box-shadow: 0 12px 40px rgba(0,0,0,.3); }
+    .acc-model { font-size: 13px; color: var(--text-secondary); margin-bottom: 12px; }
+    .acc-value {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 52px; font-weight: 700;
+      letter-spacing: -.04em;
+    }
+    .acc-value.green { color: var(--green); }
+    .acc-value.white { color: var(--text-primary); }
+    .acc-label { font-size: 12px; color: var(--text-muted); margin-top: 4px; letter-spacing: .06em; }
+    .acc-tags { display: flex; gap: 6px; margin-top: 16px; flex-wrap: wrap; justify-content: center; }
+    .acc-tag {
+      padding: 4px 10px; border-radius: 6px; font-size: 11px;
+      background: rgba(255,255,255,0.04); color: var(--text-secondary);
+      border: 1px solid var(--border);
+    }
+
+    /* ── MATCH PREDICTOR DEMO ── */
+    .predictor-demo {
+      margin-top: 60px;
+      display: grid; grid-template-columns: 1fr 1fr; gap: 24px;
+    }
+    .predictor-panel {
+      border-radius: 20px; padding: 28px;
+      border: 1px solid var(--border);
+      background: var(--bg-card);
+      backdrop-filter: blur(20px);
+    }
+    .predictor-panel h3 {
+      font-size: 15px; font-weight: 600; color: var(--text-secondary);
+      margin-bottom: 20px; text-transform: uppercase; letter-spacing: .1em; font-size: 12px;
+    }
+    .player-input-row {
+      display: flex; gap: 12px; align-items: center; margin-bottom: 16px;
+    }
+    .player-avatar {
+      width: 44px; height: 44px; border-radius: 12px;
+      background: linear-gradient(135deg, rgba(0,255,136,0.2), rgba(14,165,233,0.2));
+      display: flex; align-items: center; justify-content: center;
+      font-size: 20px; flex-shrink: 0;
+      border: 1px solid var(--border-green);
+    }
+    .player-name { font-size: 16px; font-weight: 600; color: var(--text-primary); }
+    .player-team { font-size: 12px; color: var(--text-secondary); margin-top: 2px; }
+
+    .input-field {
+      width: 100%; padding: 10px 14px; border-radius: 10px;
+      background: rgba(255,255,255,0.04); border: 1px solid var(--border);
+      color: var(--text-primary); font-size: 14px; font-family: 'Inter', sans-serif;
+      margin-bottom: 12px; transition: border-color .2s;
+      outline: none;
+    }
+    .input-field:focus { border-color: var(--border-green); }
+    .input-field::placeholder { color: var(--text-muted); }
+
+    .stats-grid-small {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px;
+    }
+    .stat-chip {
+      padding: 10px 14px; border-radius: 10px;
+      background: rgba(255,255,255,0.03); border: 1px solid var(--border);
+    }
+    .stat-chip-label { font-size: 11px; color: var(--text-muted); letter-spacing: .05em; text-transform: uppercase; }
+    .stat-chip-value { font-size: 18px; font-weight: 700; color: var(--text-primary); margin-top: 2px; }
+    .stat-chip-value.green { color: var(--green); }
+
+    .predict-btn {
+      width: 100%; padding: 14px; border-radius: 12px;
+      background: linear-gradient(135deg, var(--green), #00d4aa);
+      color: #060a0f; font-size: 15px; font-weight: 700;
+      border: none; cursor: pointer; transition: all .3s;
+      font-family: 'Inter', sans-serif;
+    }
+    .predict-btn:hover {
+      box-shadow: 0 0 40px rgba(0,255,136,0.35);
+      transform: translateY(-2px);
+    }
+    .predict-btn:active { transform: translateY(0); }
+    .predict-btn.loading { opacity: .7; cursor: not-allowed; }
+
+    .result-panel {
+      display: flex; flex-direction: column; justify-content: center;
+      align-items: center; gap: 16px;
+    }
+    .probability-ring {
+      position: relative; width: 180px; height: 180px;
+    }
+    .probability-ring svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+    .ring-bg { fill: none; stroke: rgba(255,255,255,0.06); stroke-width: 8; }
+    .ring-fill {
+      fill: none; stroke: url(#ringGrad); stroke-width: 8;
+      stroke-linecap: round;
+      stroke-dasharray: 502;
+      stroke-dashoffset: 502;
+      transition: stroke-dashoffset 1.4s cubic-bezier(.4,0,.2,1);
+    }
+    .ring-center {
+      position: absolute; inset: 0;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+    }
+    .ring-percent {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 44px; font-weight: 700; letter-spacing: -.04em; color: var(--green);
+    }
+    .ring-sublabel { font-size: 12px; color: var(--text-secondary); }
+
+    .prediction-tags { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+    .pred-tag {
+      padding: 6px 14px; border-radius: 8px; font-size: 12px; font-weight: 500;
+      background: rgba(0,255,136,0.08); color: var(--green);
+      border: 1px solid var(--border-green);
+    }
+    .pred-tag.blue {
+      background: rgba(14,165,233,0.08); color: var(--blue);
+      border-color: rgba(14,165,233,0.25);
+    }
+
+    /* ── FOOTER ── */
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 40px;
+      display: flex; align-items: center; justify-content: space-between;
+      color: var(--text-muted); font-size: 13px;
+    }
+    .footer-logo {
+      font-family: 'Space Grotesk', sans-serif; font-weight: 700;
+      font-size: 16px; letter-spacing: -.02em;
+      background: linear-gradient(135deg, var(--green), #00d4ff);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .footer-links { display: flex; gap: 24px; }
+    .footer-links a { color: var(--text-muted); text-decoration: none; transition: color .2s; }
+    .footer-links a:hover { color: var(--text-primary); }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width: 900px) {
+      .features-grid { grid-template-columns: 1fr 1fr; }
+      .pipeline-wrap, .accuracy-wrap, .predictor-demo { grid-template-columns: 1fr; }
+      nav { padding: 0 20px; }
+      .nav-links { display: none; }
+      section { padding: 60px 20px; }
+      .hero { padding: 100px 20px 60px; }
+    }
+    @media (max-width: 600px) {
+      .features-grid { grid-template-columns: 1fr; }
+      .stats-row { flex-direction: column; }
+      .stat-item { border-right: none; border-bottom: 1px solid var(--border); }
+      .stat-item:last-child { border-bottom: none; }
+      .hero-actions { flex-direction: column; width: 100%; }
+      .btn-hero-primary, .btn-hero-secondary { width: 100%; justify-content: center; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ─────────── SPLASH SCREEN ─────────── -->
+<div id="splash">
+  <div class="splash-logo-wrap">
+    <div class="splash-logo-circle">
+      <span class="splash-icon">⚽</span>
+    </div>
+  </div>
+  <div class="splash-wordmark">OFF SIDE</div>
+  <div class="splash-tagline">Football · AI · Analytics</div>
+  <div class="splash-progress"><div class="splash-progress-bar"></div></div>
+</div>
+
+<!-- ─────────── BACKGROUND LAYERS ─────────── -->
+<div class="bg-grid"></div>
+<canvas class="particles-canvas" id="particles"></canvas>
+<div class="orb orb-1"></div>
+<div class="orb orb-2"></div>
+<div class="orb orb-3"></div>
+
+<!-- ─────────── CUSTOM CURSOR ─────────── -->
+<div class="cursor-dot" id="cursorDot"></div>
+<div class="cursor-ring" id="cursorRing"></div>
+<canvas id="trailCanvas"></canvas>
+
+<!-- ─────────── MAIN ─────────── -->
+<div class="main">
+
+  <!-- NAV -->
+  <nav id="navbar">
+    <a href="#" class="nav-logo">
+      <div class="nav-logo-badge">⚽</div>
+      <span class="nav-logo-text">OFF <span>SIDE</span></span>
+    </a>
+    <ul class="nav-links">
+      <li><a href="#features">Features</a></li>
+      <li><a href="#pipeline">Pipeline</a></li>
+      <li><a href="#accuracy">Models</a></li>
+      <li><a href="#predictor">Demo</a></li>
+    </ul>
+    <div class="nav-cta">
+      <button class="btn-ghost" onclick="window.location.href='#predictor'">Live Demo</button>
+      <button class="btn-primary" onclick="window.open('http://localhost:8501','_blank')">Launch App →</button>
+    </div>
+  </nav>
+
+  <!-- HERO -->
+  <div class="hero">
+    <div class="hero-badge">
+      <div class="hero-badge-dot"></div>
+      Live · IEEE Datathon 2026
+    </div>
+    <h1 class="hero-title">
+      <span class="line1">Predict Who</span>
+      <span class="line2">Scores Next</span>
+    </h1>
+    <p class="hero-sub">
+      Advanced AI models trained on 1.18 million match appearances. Predict goal-scoring probability using xG, market value, playing time context, and ensemble learning.
+    </p>
+    <div class="hero-actions">
+      <button class="btn-hero-primary" id="demoBtn">
+        <span>⚡</span> Try Prediction Engine
+      </button>
+      <button class="btn-hero-secondary" onclick="document.getElementById('pipeline').scrollIntoView({behavior:'smooth'})">
+        <span>📊</span> How It Works
+      </button>
+    </div>
+
+    <div class="hero-stats">
+      <div class="stats-row">
+        <div class="stat-item">
+          <div class="stat-value" id="cnt-rows">0</div>
+          <div class="stat-label">Training Appearances</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-value" id="cnt-feats">0</div>
+          <div class="stat-label">Engineered Features</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-value" id="cnt-ap">0.00</div>
+          <div class="stat-label">OOF Average Precision</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="scroll-hint">
+      <span>Scroll to explore</span>
+      <div class="scroll-arrow">↓</div>
+    </div>
+  </div>
+
+  <!-- FEATURES -->
+  <section id="features" style="max-width:1200px;margin:0 auto;">
+    <div class="reveal">
+      <div class="section-label">Core Capabilities</div>
+      <h2 class="section-title">Built for Football Analytics</h2>
+      <p class="section-sub">Six distinct intelligence layers work together to deliver state-of-the-art goal scoring predictions.</p>
+    </div>
+    <div class="features-grid" style="margin-top:50px;">
+
+      <div class="feature-card reveal" style="transition-delay:.05s" id="fc1">
+        <div class="feature-icon-wrap green">🎯</div>
+        <div class="feature-title">Expected Goals (xG) Engine</div>
+        <div class="feature-desc">Models historical average xG, npxG, and xGChain scaled to match participation ratio for precise in-match goal probability calculations.</div>
+      </div>
+
+      <div class="feature-card reveal" style="transition-delay:.1s" id="fc2">
+        <div class="feature-icon-wrap blue">🏦</div>
+        <div class="feature-title">Market Intelligence</div>
+        <div class="feature-desc">Incorporates player market value, peak value ratios, and value trajectory to quantify player quality and form signals from financial data.</div>
+      </div>
+
+      <div class="feature-card reveal" style="transition-delay:.15s" id="fc3">
+        <div class="feature-icon-wrap purple">🎓</div>
+        <div class="feature-title">International Cap Efficiency</div>
+        <div class="feature-desc">Encodes international experience and goals-per-cap efficiency, capturing elite player quality signals that go beyond club performance data.</div>
+      </div>
+
+      <div class="feature-card reveal" style="transition-delay:.2s" id="fc4">
+        <div class="feature-icon-wrap orange">🔀</div>
+        <div class="feature-title">Multi-Smoothing Target Encoding</div>
+        <div class="feature-desc">Out-of-fold smoothed target encoding with m∈{5,20,50} for player names, clubs, stadiums, and referees — eliminates leakage while preserving signal.</div>
+      </div>
+
+      <div class="feature-card reveal" style="transition-delay:.25s" id="fc5">
+        <div class="feature-icon-wrap red">⚖️</div>
+        <div class="feature-title">4-Model Rank Ensemble</div>
+        <div class="feature-desc">Optimal blending of 2× CatBoost (depth 6-7) and 2× LightGBM via greedy rank-averaging weight search across 5-fold cross validation predictions.</div>
+      </div>
+
+      <div class="feature-card reveal" style="transition-delay:.3s" id="fc6">
+        <div class="feature-icon-wrap cyan">🛡️</div>
+        <div class="feature-title">Domain Post-Processing</div>
+        <div class="feature-desc">Enforces football rules — players with 0 minutes played cannot score. Applies a deterministic zero-override rule that boosts AP measurably.</div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- PIPELINE SECTION -->
+  <section id="pipeline" style="max-width:1200px;margin:0 auto;">
+    <div class="reveal">
+      <div class="section-label">Technical Pipeline</div>
+      <h2 class="section-title">From Raw Data<br>to Prediction</h2>
+    </div>
+
+    <div class="pipeline-wrap" style="margin-top:50px;">
+      <!-- Code Preview Card -->
+      <div class="pipeline-visual reveal">
+        <div class="pipeline-card">
+          <div class="pipeline-header">
+            <div class="dot dot-red"></div>
+            <div class="dot dot-yellow"></div>
+            <div class="dot dot-green"></div>
+            <span style="margin-left:8px;font-size:12px;color:var(--text-muted)">nuclear_boost.py</span>
+          </div>
+          <div class="pipeline-body">
+            <div class="code-line"><span class="kw">from</span> <span class="var">src.features</span> <span class="kw">import</span> <span class="fn">FeaturePipeline</span></div>
+            <div class="code-line" style="margin-top:12px"><span class="cm"># Multi-smoothing target encoding</span></div>
+            <div class="code-line"><span class="kw">for</span> <span class="var">SM</span> <span class="kw">in</span> [<span class="num">5</span>, <span class="num">20</span>, <span class="num">50</span>]:</div>
+            <div class="code-line">&nbsp;&nbsp;<span class="kw">for</span> <span class="var">col</span> <span class="kw">in</span> <span class="var">ENCODE_COLS</span>:</div>
+            <div class="code-line">&nbsp;&nbsp;&nbsp;&nbsp;<span class="fn">smooth_oof_encode</span>(<span class="var">col</span>, <span class="var">SM</span>)</div>
+            <div class="code-line" style="margin-top:12px"><span class="cm"># 4-model diverse ensemble</span></div>
+            <div class="code-line"><span class="var">cb1</span> = <span class="fn">CatBoost</span>(depth=<span class="num">7</span>, seed=<span class="num">42</span>)</div>
+            <div class="code-line"><span class="var">cb2</span> = <span class="fn">CatBoost</span>(depth=<span class="num">6</span>, seed=<span class="num">123</span>)</div>
+            <div class="code-line"><span class="var">lgb1</span> = <span class="fn">LightGBM</span>(leaves=<span class="num">63</span>)</div>
+            <div class="code-line"><span class="var">lgb2</span> = <span class="fn">LightGBM</span>(leaves=<span class="num">31</span>)</div>
+            <div class="code-line" style="margin-top:12px"><span class="cm"># Greedy rank-average blending</span></div>
+            <div class="code-line"><span class="var">ensemble</span> = <span class="fn">rank_blend</span>(<span class="var">oof_preds</span>, <span class="var">best_w</span>)</div>
+          </div>
+          <div class="output-wrap">
+            <div class="output-pill">OOF AP: 0.5000</div>
+            <div class="metric-badges">
+              <div class="metric-badge">167 features</div>
+              <div class="metric-badge">5-fold CV</div>
+              <div class="metric-badge">1.18M rows</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Steps -->
+      <div class="pipeline-steps reveal" style="transition-delay:.15s">
+        <div class="step-item active">
+          <div class="step-num">1</div>
+          <div class="step-content">
+            <div class="step-title">Data Ingestion & Feature Pipeline</div>
+            <div class="step-desc">Load 1.18M appearance records. Parse temporal features (year, month, day of week). Apply categorical encoding and football-domain ratios.</div>
+          </div>
+        </div>
+        <div class="step-item active">
+          <div class="step-num">2</div>
+          <div class="step-content">
+            <div class="step-title">Advanced Feature Engineering</div>
+            <div class="step-desc">Create 40+ new features: xG×minutes_ratio, total_threat (xG+xA), final_third (xGChain−xGBuildup), prime_age_xG, height×xG, attacker interactions.</div>
+          </div>
+        </div>
+        <div class="step-item active">
+          <div class="step-num">3</div>
+          <div class="step-content">
+            <div class="step-title">Multi-Smoothing Target Encoding</div>
+            <div class="step-desc">OOF smoothed encoding at m=5,20,50 for players, clubs, stadiums, referees, confederations + contextual interaction TE (player×club, player×competition).</div>
+          </div>
+        </div>
+        <div class="step-item">
+          <div class="step-num">4</div>
+          <div class="step-content">
+            <div class="step-title">Ensemble Training & Blending</div>
+            <div class="step-desc">Train 4 diverse models on 5-fold CV. Greedy grid search over rank-average and linear blend weights selects optimal final ensemble.</div>
+          </div>
+        </div>
+        <div class="step-item">
+          <div class="step-num">5</div>
+          <div class="step-content">
+            <div class="step-title">Post-Processing & Submission</div>
+            <div class="step-desc">Force zero probability for 0-minutes-played appearances. Generate solution.csv with appearance_id → scored_flag probability mapping.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ACCURACY SECTION -->
+  <section id="accuracy" style="max-width:1200px;margin:0 auto;">
+    <div class="reveal" style="text-align:center;">
+      <div class="section-label">Model Benchmarks</div>
+      <h2 class="section-title">Performance Milestones</h2>
+      <p class="section-sub" style="max-width:500px;margin:0 auto;">Every improvement guided by out-of-fold Average Precision — a rigorous, leakage-free metric for imbalanced classification.</p>
+    </div>
+
+    <div class="accuracy-wrap" style="margin-top:56px;">
+      <div class="accuracy-card reveal" style="transition-delay:.05s">
+        <div class="acc-model">LightGBM Baseline</div>
+        <div class="acc-value white">0.4090</div>
+        <div class="acc-label">OUT-OF-FOLD AP</div>
+        <div class="acc-tags">
+          <div class="acc-tag">5-Fold CV</div>
+          <div class="acc-tag">Basic Features</div>
+        </div>
+      </div>
+      <div class="accuracy-card reveal" style="transition-delay:.1s">
+        <div class="acc-model">CatBoost Champion</div>
+        <div class="acc-value white">0.4619</div>
+        <div class="acc-label">OUT-OF-FOLD AP</div>
+        <div class="acc-tags">
+          <div class="acc-tag">Smooth TE</div>
+          <div class="acc-tag">Post-Proc</div>
+          <div class="acc-tag">+2.7%</div>
+        </div>
+      </div>
+      <div class="accuracy-card champion reveal" style="transition-delay:.15s">
+        <div class="champion-badge">🏆 Best Model</div>
+        <div class="acc-model" style="margin-top:8px">Nuclear 4-Model Ensemble</div>
+        <div class="acc-value green">0.5000</div>
+        <div class="acc-label">OUT-OF-FOLD AP</div>
+        <div class="acc-tags">
+          <div class="acc-tag">4 Models</div>
+          <div class="acc-tag">Multi-Smooth TE</div>
+          <div class="acc-tag">167 Features</div>
+          <div class="acc-tag">+22%</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- PREDICTOR DEMO -->
+  <section id="predictor" style="max-width:1200px;margin:0 auto;">
+    <div class="reveal">
+      <div class="section-label">Interactive Demo</div>
+      <h2 class="section-title">Predict Goal Probability</h2>
+      <p class="section-sub">Enter player statistics to simulate the model's prediction engine in real-time.</p>
+    </div>
+
+    <div class="predictor-demo" style="margin-top:50px;">
+      <!-- Input Panel -->
+      <div class="predictor-panel reveal">
+        <h3>Player Profile</h3>
+        <div class="player-input-row">
+          <div class="player-avatar" id="playerEmoji">⚽</div>
+          <div>
+            <div class="player-name" id="playerNameDisplay">Enter player details</div>
+            <div class="player-team" id="playerTeamDisplay">Position · Club</div>
+          </div>
+        </div>
+
+        <input class="input-field" id="playerName" type="text" placeholder="Player name (e.g. Erling Haaland)" />
+        <input class="input-field" id="playerPosition" type="text" placeholder="Position (Attack / Midfield / Defender)" />
+
+        <div class="stats-grid-small">
+          <div class="stat-chip">
+            <div class="stat-chip-label">avg xG</div>
+            <input type="number" step="0.01" min="0" max="2" value="0.32"
+              class="input-field" style="margin:4px 0 0;padding:4px 0;border:none;background:transparent;font-size:22px;font-weight:700;color:var(--green);width:100%" id="iXG" />
+          </div>
+          <div class="stat-chip">
+            <div class="stat-chip-label">avg shots</div>
+            <input type="number" step="0.1" min="0" max="10" value="2.4"
+              class="input-field" style="margin:4px 0 0;padding:4px 0;border:none;background:transparent;font-size:22px;font-weight:700;color:var(--text-primary);width:100%" id="iShots" />
+          </div>
+          <div class="stat-chip">
+            <div class="stat-chip-label">minutes ratio</div>
+            <input type="number" step="0.01" min="0" max="1" value="0.87"
+              class="input-field" style="margin:4px 0 0;padding:4px 0;border:none;background:transparent;font-size:22px;font-weight:700;color:var(--text-primary);width:100%" id="iMR" />
+          </div>
+          <div class="stat-chip">
+            <div class="stat-chip-label">intl. goals</div>
+            <input type="number" step="1" min="0" max="150" value="18"
+              class="input-field" style="margin:4px 0 0;padding:4px 0;border:none;background:transparent;font-size:22px;font-weight:700;color:var(--text-primary);width:100%" id="iIntlG" />
+          </div>
+        </div>
+
+        <button class="predict-btn" id="predictBtn">⚡ Predict Scoring Probability</button>
+      </div>
+
+      <!-- Result Panel -->
+      <div class="predictor-panel result-panel reveal" style="transition-delay:.12s">
+        <div class="probability-ring">
+          <svg viewBox="0 0 180 180">
+            <defs>
+              <linearGradient id="ringGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#00ff88" />
+                <stop offset="100%" stop-color="#00d4ff" />
+              </linearGradient>
+            </defs>
+            <circle class="ring-bg" cx="90" cy="90" r="80" />
+            <circle class="ring-fill" id="ringFill" cx="90" cy="90" r="80" />
+          </svg>
+          <div class="ring-center">
+            <div class="ring-percent" id="ringPercent">—</div>
+            <div class="ring-sublabel">Scoring Prob.</div>
+          </div>
+        </div>
+
+        <div class="prediction-tags" id="predTags">
+          <div class="pred-tag blue">Awaiting input</div>
+        </div>
+
+        <div style="text-align:center;color:var(--text-muted);font-size:13px;line-height:1.6;max-width:260px" id="predExplain">
+          Enter player statistics on the left and press Predict to see the AI-computed goal scoring probability.
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA BAND -->
+  <section style="text-align:center; max-width:1200px;margin:0 auto;padding-bottom:60px;">
+    <div class="reveal" style="padding:60px 40px;border-radius:24px;border:1px solid var(--border-green);background:linear-gradient(135deg,rgba(0,255,136,0.04),rgba(14,165,233,0.03));backdrop-filter:blur(20px);">
+      <div class="section-label">Get Started</div>
+      <h2 class="section-title">Launch the Full Dashboard</h2>
+      <p class="section-sub" style="margin:0 auto 36px;">Access the interactive Streamlit app with real player profiles, batch prediction, and downloadable submission files.</p>
+      <button class="btn-hero-primary" style="margin:0 auto" onclick="window.open('http://localhost:8501','_blank')">
+        <span>🚀</span> Open Streamlit Dashboard
+      </button>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer>
+    <div class="footer-logo">OFF SIDE</div>
+    <div style="color:var(--text-muted);font-size:13px">Built for IEEE Computer Society MUJ · Offside Football Analytics Datathon 2026</div>
+    <div class="footer-links">
+      <a href="#">GitHub</a>
+      <a href="#">Kaggle</a>
+      <a href="#pipeline">Docs</a>
+    </div>
+  </footer>
+
+</div><!-- end .main -->
+
+<script>
+/* ═══════════════════════════════════════
+   SPLASH SCREEN
+══════════════════════════════════════════ */
+window.addEventListener('load', () => {
+  setTimeout(() => {
+    document.getElementById('splash').classList.add('hidden');
+  }, 2100);
+});
+
+/* ═══════════════════════════════════════
+   CURSOR + COMET TRAIL
+══════════════════════════════════════════ */
+const cursorDot  = document.getElementById('cursorDot');
+const cursorRing = document.getElementById('cursorRing');
+const trailCanvas = document.getElementById('trailCanvas');
+const tctx = trailCanvas.getContext('2d');
+
+// Resize trail canvas
+function resizeTrail() {
+  trailCanvas.width  = window.innerWidth;
+  trailCanvas.height = window.innerHeight;
+}
+resizeTrail();
+window.addEventListener('resize', resizeTrail);
+
+// Mouse state
+let mx = 0, my = 0, rx = 0, ry = 0, prevMx = 0, prevMy = 0;
+let cursorVisible = false;
+
+document.addEventListener('mousemove', e => {
+  prevMx = mx; prevMy = my;
+  mx = e.clientX; my = e.clientY;
+  if (!cursorVisible) {
+    cursorDot.style.opacity  = '1';
+    cursorRing.style.opacity = '1';
+    cursorVisible = true;
+  }
+});
+document.addEventListener('mouseleave', () => {
+  cursorDot.style.opacity  = '0';
+  cursorRing.style.opacity = '0';
+  cursorVisible = false;
+});
+
+// Trail particles pool
+const trailParticles = [];
+let frameCount = 0;
+
+class TrailDot {
+  constructor(x, y, speed) {
+    this.x = x + (Math.random() - .5) * 4;
+    this.y = y + (Math.random() - .5) * 4;
+    this.r = Math.random() * 2.8 + 1;
+    this.life = 1.0;
+    // drift slightly opposite to travel direction
+    const angle = Math.random() * Math.PI * 2;
+    this.vx = Math.cos(angle) * (Math.random() * 0.8);
+    this.vy = Math.sin(angle) * (Math.random() * 0.8) - 0.3; // slight upward drift
+    this.decay = Math.random() * 0.03 + 0.025;
+    this.hue = Math.random() > .25 ? 150 : 185; // green or cyan
+  }
+  update() {
+    this.x += this.vx;
+    this.y += this.vy;
+    this.r  *= 0.97;
+    this.life -= this.decay;
+  }
+  draw(ctx) {
+    if (this.life <= 0) return;
+    const alpha = Math.max(0, this.life);
+    // Outer glow
+    const grd = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, this.r * 3.5);
+    grd.addColorStop(0, `hsla(${this.hue},100%,65%,${alpha * 0.9})`);
+    grd.addColorStop(0.4, `hsla(${this.hue},100%,60%,${alpha * 0.35})`);
+    grd.addColorStop(1,   `hsla(${this.hue},100%,55%,0)`);
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, this.r * 3.5, 0, Math.PI * 2);
+    ctx.fillStyle = grd;
+    ctx.fill();
+    // Bright core
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, this.r, 0, Math.PI * 2);
+    ctx.fillStyle = `hsla(${this.hue},100%,90%,${alpha})`;
+    ctx.fill();
+  }
+}
+
+// Spawn trail particles
+function spawnTrail(x, y) {
+  const dx = x - prevMx, dy = y - prevMy;
+  const speed = Math.sqrt(dx*dx + dy*dy);
+  const count = Math.min(Math.floor(speed * 0.4 + 1), 5);
+  for (let i = 0; i < count; i++) trailParticles.push(new TrailDot(x, y, speed));
+}
+
+// Main cursor animation loop
+function animCursor() {
+  frameCount++;
+
+  // Snap dot to mouse instantly
+  cursorDot.style.left = mx + 'px';
+  cursorDot.style.top  = my + 'px';
+
+  // Lag ring behind
+  rx += (mx - rx) * 0.1;
+  ry += (my - ry) * 0.1;
+  cursorRing.style.left = rx + 'px';
+  cursorRing.style.top  = ry + 'px';
+
+  // Spawn trail every frame when moving
+  if (cursorVisible) spawnTrail(mx, my);
+
+  // Draw trail
+  tctx.clearRect(0, 0, trailCanvas.width, trailCanvas.height);
+  for (let i = trailParticles.length - 1; i >= 0; i--) {
+    trailParticles[i].update();
+    trailParticles[i].draw(tctx);
+    if (trailParticles[i].life <= 0) trailParticles.splice(i, 1);
+  }
+
+  // Keep pool bounded
+  if (trailParticles.length > 200) trailParticles.splice(0, trailParticles.length - 200);
+
+  requestAnimationFrame(animCursor);
+}
+animCursor();
+
+// Hover effects — grow dot + ring, intensify glow
+document.querySelectorAll('a, button, .feature-card, input').forEach(el => {
+  el.addEventListener('mouseenter', () => {
+    cursorDot.classList.add('hovered');
+    cursorRing.classList.add('hovered');
+    // Extra burst of particles on hover
+    for (let i = 0; i < 12; i++) trailParticles.push(new TrailDot(mx, my, 0));
+  });
+  el.addEventListener('mouseleave', () => {
+    cursorDot.classList.remove('hovered');
+    cursorRing.classList.remove('hovered');
+  });
+});
+
+
+/* ═══════════════════════════════════════
+   PARTICLES
+══════════════════════════════════════════ */
+const canvas = document.getElementById('particles');
+const ctx = canvas.getContext('2d');
+let W, H, particles = [];
+
+function resizeCanvas() {
+  W = canvas.width = window.innerWidth;
+  H = canvas.height = window.innerHeight;
+}
+resizeCanvas();
+window.addEventListener('resize', resizeCanvas);
+
+class Particle {
+  constructor() { this.reset(); }
+  reset() {
+    this.x = Math.random() * W;
+    this.y = Math.random() * H;
+    this.r = Math.random() * 1.5 + 0.3;
+    this.vx = (Math.random() - .5) * 0.4;
+    this.vy = (Math.random() - .5) * 0.4;
+    this.alpha = Math.random() * 0.4 + 0.05;
+    this.color = Math.random() > .7 ? '#00ff88' : '#8b949e';
+  }
+  update() {
+    this.x += this.vx; this.y += this.vy;
+    if (this.x < 0 || this.x > W || this.y < 0 || this.y > H) this.reset();
+  }
+  draw() {
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, this.r, 0, Math.PI * 2);
+    ctx.fillStyle = this.color;
+    ctx.globalAlpha = this.alpha;
+    ctx.fill();
+    ctx.globalAlpha = 1;
+  }
+}
+
+for (let i = 0; i < 80; i++) particles.push(new Particle());
+
+function animParticles() {
+  ctx.clearRect(0, 0, W, H);
+  particles.forEach(p => { p.update(); p.draw(); });
+  // Draw connections
+  for (let i = 0; i < particles.length; i++) {
+    for (let j = i+1; j < particles.length; j++) {
+      const dx = particles[i].x - particles[j].x;
+      const dy = particles[i].y - particles[j].y;
+      const dist = Math.sqrt(dx*dx+dy*dy);
+      if (dist < 100) {
+        ctx.beginPath();
+        ctx.strokeStyle = '#00ff88';
+        ctx.globalAlpha = (.06 * (1 - dist/100));
+        ctx.lineWidth = .5;
+        ctx.moveTo(particles[i].x, particles[i].y);
+        ctx.lineTo(particles[j].x, particles[j].y);
+        ctx.stroke();
+        ctx.globalAlpha = 1;
+      }
+    }
+  }
+  requestAnimationFrame(animParticles);
+}
+animParticles();
+
+/* ═══════════════════════════════════════
+   FEATURE CARD MOUSE GLOW
+══════════════════════════════════════════ */
+document.querySelectorAll('.feature-card').forEach(card => {
+  card.addEventListener('mousemove', e => {
+    const r = card.getBoundingClientRect();
+    card.style.setProperty('--mx', ((e.clientX - r.left) / r.width * 100) + '%');
+    card.style.setProperty('--my', ((e.clientY - r.top) / r.height * 100) + '%');
+  });
+});
+
+/* ═══════════════════════════════════════
+   SCROLL REVEAL
+══════════════════════════════════════════ */
+const reveals = document.querySelectorAll('.reveal');
+const io = new IntersectionObserver(entries => {
+  entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('visible'); io.unobserve(e.target); } });
+}, { threshold: 0.1, rootMargin: '0px 0px -60px 0px' });
+reveals.forEach(el => io.observe(el));
+
+/* ═══════════════════════════════════════
+   COUNTER ANIMATION
+══════════════════════════════════════════ */
+function animCount(el, target, isFloat=false, decimals=2, duration=1800, delay=2400) {
+  setTimeout(() => {
+    const start = performance.now();
+    const step = ts => {
+      const p = Math.min((ts - start) / duration, 1);
+      const ease = 1 - Math.pow(1-p, 3);
+      const val = target * ease;
+      el.textContent = isFloat ? val.toFixed(decimals) : Math.round(val).toLocaleString();
+      if (p < 1) requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
+  }, delay);
+}
+animCount(document.getElementById('cnt-rows'), 1185335, false, 0, 2000, 2400);
+animCount(document.getElementById('cnt-feats'), 167, false, 0, 1600, 2500);
+animCount(document.getElementById('cnt-ap'), 0.5000, true, 4, 1800, 2600);
+
+/* ═══════════════════════════════════════
+   PREDICTION ENGINE
+══════════════════════════════════════════ */
+const CIRCUMFERENCE = 2 * Math.PI * 80; // r=80
+
+function setRing(prob) {
+  const fill = document.getElementById('ringFill');
+  const offset = CIRCUMFERENCE * (1 - prob);
+  fill.style.strokeDasharray = CIRCUMFERENCE;
+  fill.style.strokeDashoffset = offset;
+}
+
+function computeProb(xg, shots, mr, intlG) {
+  // Simplified heuristic ensemble model (real model is Python-side)
+  const base = xg * 1.4;
+  const shotBoost = Math.log1p(shots) * 0.08;
+  const mrBoost = mr * 0.22;
+  const intlBoost = Math.log1p(intlG) * 0.02;
+  let p = base + shotBoost + mrBoost + intlBoost;
+  p = Math.min(Math.max(p, 0.01), 0.98);
+  // Logistic-style squishing
+  return 1 / (1 + Math.exp(-5.5 * (p - 0.35)));
+}
+
+function updatePlayerDisplay() {
+  const name = document.getElementById('playerName').value;
+  const pos = document.getElementById('playerPosition').value;
+  const nameEl = document.getElementById('playerNameDisplay');
+  const teamEl = document.getElementById('playerTeamDisplay');
+  if (name) { nameEl.textContent = name; teamEl.textContent = pos || 'Position unknown'; }
+  const emojis = { 'attack': '⚡', 'mid': '🎯', 'def': '🛡️', 'goal': '🧤' };
+  const lower = pos.toLowerCase();
+  let emoji = '⚽';
+  if (lower.includes('attack') || lower.includes('forward') || lower.includes('winger')) emoji = '⚡';
+  else if (lower.includes('mid')) emoji = '🎯';
+  else if (lower.includes('def')) emoji = '🛡️';
+  else if (lower.includes('goal') || lower.includes('keeper')) emoji = '🧤';
+  document.getElementById('playerEmoji').textContent = emoji;
+}
+
+document.getElementById('playerName').addEventListener('input', updatePlayerDisplay);
+document.getElementById('playerPosition').addEventListener('input', updatePlayerDisplay);
+
+let isLoading = false;
+document.getElementById('predictBtn').addEventListener('click', () => {
+  if (isLoading) return;
+  isLoading = true;
+  const btn = document.getElementById('predictBtn');
+  btn.textContent = '⏳ Computing...';
+  btn.classList.add('loading');
+
+  const xg = parseFloat(document.getElementById('iXG').value) || 0.1;
+  const shots = parseFloat(document.getElementById('iShots').value) || 1;
+  const mr = parseFloat(document.getElementById('iMR').value) || 0.5;
+  const intlG = parseFloat(document.getElementById('iIntlG').value) || 0;
+
+  setTimeout(() => {
+    const prob = computeProb(xg, shots, mr, intlG);
+    const pct = Math.round(prob * 100);
+
+    document.getElementById('ringPercent').textContent = pct + '%';
+    setRing(prob);
+
+    // Tags
+    const tags = document.getElementById('predTags');
+    const zone = pct > 50 ? 'High' : pct > 20 ? 'Medium' : 'Low';
+    const zoneClass = pct > 50 ? '' : 'blue';
+    tags.innerHTML = `
+      <div class="pred-tag ${zoneClass}">${zone} Probability</div>
+      <div class="pred-tag blue">xG: ${xg.toFixed(2)}</div>
+      <div class="pred-tag blue">min%: ${Math.round(mr*100)}%</div>
+    `;
+
+    const explain = pct > 50
+      ? `High goal threat — above-average xG of ${xg.toFixed(2)} combined with strong playing time (${Math.round(mr*100)}%) creates a compelling scoring scenario.`
+      : pct > 20
+      ? `Moderate scoring chance. The player has reasonable expected goals but limited by playing time or position role.`
+      : `Below-average scoring probability based on xG profile and participation time.`;
+    document.getElementById('predExplain').textContent = explain;
+
+    btn.textContent = '⚡ Predict Scoring Probability';
+    btn.classList.remove('loading');
+    isLoading = false;
+  }, 900);
+});
+
+/* ═══════════════════════════════════════
+   NAVBAR SCROLL BEHAVIOUR
+══════════════════════════════════════════ */
+const navbar = document.getElementById('navbar');
+window.addEventListener('scroll', () => {
+  if (window.scrollY > 60) navbar.style.background = 'rgba(6,10,15,0.92)';
+  else navbar.style.background = 'rgba(6,10,15,0.7)';
+});
+
+/* Button scroll to predictor */
+document.getElementById('demoBtn').addEventListener('click', () => {
+  document.getElementById('predictor').scrollIntoView({ behavior: 'smooth' });
+  setTimeout(() => document.getElementById('predictBtn').click(), 800);
+});
+</script>
+</body>
+</html>

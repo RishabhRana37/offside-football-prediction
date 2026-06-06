@@ -1,4 +1,4 @@
-# Large Datasets
+# ─── Large Datasets (never commit) ────────────────────────────────────────
 train.csv
 train_cleaned.csv
 train_original_backup.csv
@@ -6,16 +6,26 @@ test.csv
 test_cleaned.csv
 sample_submission.csv
 submission.csv
+solution.csv
 
-# Python & Environment
-.venv/
-__pycache__/
-*.pyc
-.DS_Store
-.ipynb_checkpoints/
-scratch/
-
-# Model Checkpoints & Large Binaries
+# ─── Model Artefacts (downloaded at build time from HuggingFace Hub) ──────
 *.pkl
 *.cbm
 catboost_info/
+
+# ─── Python & Environment ──────────────────────────────────────────────────
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+.DS_Store
+.ipynb_checkpoints/
+scratch/
+*.egg-info/
+dist/
+build/
+
+# ─── IDE ──────────────────────────────────────────────────────────────────
+.idea/
+.vscode/
+*.swp
