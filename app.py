@@ -163,7 +163,7 @@ with tab_single:
     
     with col1:
         st.markdown("<div class='custom-label'>👤 Player Bio & Details</div>", unsafe_allow_html=True)
-        age = st.slider("Age", 16, 42, int(default_age))
+        age = st.slider("Age", 15, 60, min(max(int(default_age), 15), 60))
         foot = st.selectbox("Preferred Foot", ['right', 'left', 'both'], index=['right', 'left', 'both'].index(default_foot) if default_foot in ['right', 'left', 'both'] else 0)
         position = st.selectbox("Position Group", ['Attack', 'Midfield', 'Defender', 'Goalkeeper'], index=['Attack', 'Midfield', 'Defender', 'Goalkeeper'].index(default_pos) if default_pos in ['Attack', 'Midfield', 'Defender', 'Goalkeeper'] else 0)
         sub_position = st.text_input("Detailed Sub-position", default_subpos)
@@ -171,10 +171,10 @@ with tab_single:
         
     with col2:
         st.markdown("<div class='custom-label'>📊 Performance Statistics</div>", unsafe_allow_html=True)
-        avg_xg = st.number_input("Average xG (per 90 min)", min_value=0.0, max_value=2.0, value=float(default_xg), step=0.01)
-        avg_xa = st.number_input("Average xA (per 90 min)", min_value=0.0, max_value=2.0, value=float(default_xa), step=0.01)
-        avg_shots = st.number_input("Average Shots (per 90 min)", min_value=0.0, max_value=15.0, value=float(default_shots), step=0.1)
-        minutes_ratio = st.slider("Season Minutes Played Ratio", 0.0, 1.0, float(default_min_ratio))
+        avg_xg = st.number_input("Average xG", min_value=0.0, max_value=30.0, value=min(max(float(default_xg), 0.0), 30.0), step=0.01)
+        avg_xa = st.number_input("Average xA", min_value=0.0, max_value=20.0, value=min(max(float(default_xa), 0.0), 20.0), step=0.01)
+        avg_shots = st.number_input("Average Shots", min_value=0.0, max_value=200.0, value=min(max(float(default_shots), 0.0), 200.0), step=0.1)
+        minutes_ratio = st.slider("Season Minutes Played Ratio", 0.0, 1.0, min(max(float(default_min_ratio), 0.0), 1.0))
         minutes_played = st.slider("Expected Minutes in this Match", 0, 90, 90)
         starter_flag = st.checkbox("Starting the Match?", value=True)
         
