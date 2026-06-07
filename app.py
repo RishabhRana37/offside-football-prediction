@@ -500,76 +500,56 @@ animCount('cnt-ap',    0.4619,  true,  4, 1800, 2500);
 # ─────────────────────────────────────────────────────────────────────────────
 # Load artefacts
 # ─────────────────────────────────────────────────────────────────────────────
-@st.cache_resource
-def load_model():
+@st.cache_resource(show_spinner=False)
+def load_all_artefacts():
+    """Download missing files then load everything. Cached after first run."""
+    import shutil
+    HF_REPO      = "RishabhRana37/offside-artefacts"
+    HF_REPO_TYPE = "dataset"
+    REQUIRED     = ["catboost_model.cbm", "fitted_pipeline.pkl", "te_smooth_maps.pkl"]
+
+    missing = [f for f in REQUIRED if not os.path.exists(f)]
+    if missing:
+        try:
+            from huggingface_hub import hf_hub_download
+            for fname in missing:
+                path = hf_hub_download(
+                    repo_id=HF_REPO,
+                    filename=fname,
+                    repo_type=HF_REPO_TYPE,
+                    local_dir=".",
+                )
+                if os.path.abspath(path) != os.path.abspath(fname):
+                    shutil.move(path, fname)
+        except Exception as e:
+            return None, None, {}, {"global_mean": 0.086}, str(e)
+
     m = CatBoostClassifier()
     m.load_model("catboost_model.cbm")
-    return m
 
-@st.cache_resource
-def load_pipeline():
     with open("fitted_pipeline.pkl", "rb") as f:
-        return pickle.load(f)
+        pipe = pickle.load(f)
 
-@st.cache_resource
-def load_player_profiles():
+    profiles = {}
     if os.path.exists("player_profiles.pkl"):
         with open("player_profiles.pkl", "rb") as f:
-            return pickle.load(f)
-    return {}
+            profiles = pickle.load(f)
 
-@st.cache_resource
-def load_te_maps():
-    """Smoothed target-encoding maps extracted from train.csv at global scope."""
+    te = {"global_mean": 0.086}
     if os.path.exists("te_smooth_maps.pkl"):
         with open("te_smooth_maps.pkl", "rb") as f:
-            return pickle.load(f)
-    return {"global_mean": 0.086}
+            te = pickle.load(f)
 
-# ─ Auto-download artefacts from HuggingFace Hub (Render deployment) ─────────────────
-HF_REPO      = "RishabhRana37/offside-artefacts"
-HF_REPO_TYPE = "dataset"
-REQUIRED     = ["catboost_model.cbm", "fitted_pipeline.pkl", "te_smooth_maps.pkl"]
+    return m, pipe, profiles, te, None
 
-missing_files = [f for f in REQUIRED if not os.path.exists(f)]
-if missing_files:
-    try:
-        from huggingface_hub import hf_hub_download
-        import shutil
-        st.markdown("""
-        <div style='padding:24px;background:rgba(0,255,136,0.05);border:1px solid rgba(0,255,136,0.2);border-radius:16px;text-align:center'>
-          <div style='font-size:28px;margin-bottom:8px'>\u2b07\ufe0f</div>
-          <div style='font-family:Space Grotesk,sans-serif;font-size:20px;font-weight:700;color:#f0f6fc'>Downloading model artefacts\u2026</div>
-          <div style='color:#8b949e;font-size:14px;margin-top:6px'>First load \u2014 fetching from Hugging Face Hub. Takes ~30s.</div>
-        </div>
-        """, unsafe_allow_html=True)
-        bar = st.progress(0, text="Starting download\u2026")
-        for i, fname in enumerate(missing_files):
-            bar.progress((i) / len(missing_files), text=f"Downloading {fname}\u2026")
-            path = hf_hub_download(
-                repo_id=HF_REPO,
-                filename=fname,
-                repo_type=HF_REPO_TYPE,
-                local_dir=".",
-            )
-            if os.path.abspath(path) != os.path.abspath(fname):
-                shutil.move(path, fname)
-            bar.progress((i + 1) / len(missing_files), text=f"\u2705 {fname}")
-        bar.progress(1.0, text="\u2705 All artefacts ready \u2014 reloading\u2026")
-        st.cache_resource.clear()
-        st.rerun()
-    except Exception as e:
-        st.error(f"\u26a0\ufe0f Could not download artefacts: {e}")
-        st.info(
-            "**Local users:** run `python deploy/upload_artefacts.py` to push model files to HF Hub, "
-            "or run `improve_and_submit.py` to regenerate them locally."
-        )
-        st.stop()
 
-model          = load_model()
-pipeline       = load_pipeline()
-player_profiles = load_player_profiles()
-te_maps        = load_te_maps()
+with st.spinner("Loading model artefacts... (first boot may take ~60s)"):
+    model, pipeline, player_profiles, te_maps, _load_err = load_all_artefacts()
+
+if _load_err or model is None:
+    st.error(f"Could not load model artefacts: {_load_err}")
+    st.stop()
+
 GLOBAL_MEAN    = te_maps.get("global_mean", 0.086)
 MODEL_FEATURES = model.feature_names_   # exact 103-feature list
 
