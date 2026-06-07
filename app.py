@@ -506,7 +506,7 @@ def load_all_artefacts():
     import shutil
     HF_REPO      = "RishabhRana37/offside-artefacts"
     HF_REPO_TYPE = "dataset"
-    REQUIRED     = ["catboost_model.cbm", "fitted_pipeline.pkl", "te_smooth_maps.pkl"]
+    REQUIRED     = ["catboost_model.cbm", "fitted_pipeline.pkl", "player_profiles.pkl", "te_smooth_maps.pkl"]
 
     missing = [f for f in REQUIRED if not os.path.exists(f)]
     if missing:
