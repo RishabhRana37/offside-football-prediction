@@ -3,10 +3,10 @@ import zipfile
 import shutil
 import time
 
-workspace_dir = "/Users/rana/OFF SIDE"
+workspace_dir = "/Users/ashwanikumar/code/Goal scoring probability ML/probabiltiy code/offside-football-prediction"
 search_dirs = [
-    "/Users/rana/Downloads",
-    "/Users/rana/Desktop",
+    "/Users/ashwanikumar/Downloads",
+    "/Users/ashwanikumar/Desktop",
     workspace_dir
 ]
 

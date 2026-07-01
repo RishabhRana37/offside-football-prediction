@@ -4,7 +4,7 @@ import pandas as pd
 import numpy as np
 
 def main():
-    workspace_dir = "/Users/rana/OFF SIDE"
+    workspace_dir = "/Users/ashwanikumar/code/Goal scoring probability ML/probabiltiy code/offside-football-prediction"
     train_path = os.path.join(workspace_dir, 'train.csv')
     
     print("Loading training data...")

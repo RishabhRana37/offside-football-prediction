@@ -7,7 +7,11 @@ from sklearn.model_selection import StratifiedKFold
 # Import custom modules
 from src.eda import run_eda_pipeline
 from src.features import FeaturePipeline, generate_out_of_fold_target_encoding
-from src.models import train_lgbm, train_catboost, tune_lgbm_with_optuna, tune_catboost_with_optuna, blend_predictions
+from src.models import (
+    train_lgbm, train_catboost, train_xgboost,
+    tune_lgbm_with_optuna, tune_catboost_with_optuna, tune_xgboost_with_optuna,
+    blend_predictions
+)
 from src.explain import run_explainability_pipeline
 
 def find_and_copy_datasets(workspace_dir):
@@ -57,7 +61,7 @@ def find_and_copy_datasets(workspace_dir):
 
 
 def main():
-    workspace_dir = "/Users/rana/OFF SIDE"
+    workspace_dir = "/Users/ashwanikumar/code/Goal scoring probability ML/probabiltiy code/offside-football-prediction"
     
     # 1. Locate and copy dataset files
     if not find_and_copy_datasets(workspace_dir):
@@ -84,10 +88,10 @@ def main():
     test_feat = pipeline.transform(test_df)
     
     # 4. Out-of-Fold Target Encoding (preventing leakage)
-    print("  Generating Out-of-Fold Target Encoding for Player/Club...")
+    print("  Generating Out-of-Fold Target Encoding for Player/Club/Referee/Position/Stadium...")
     skf = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
     cols_to_encode = []
-    for col in ['name_y', 'home_club_name', 'away_club_name']:
+    for col in ['name_y', 'home_club_name', 'away_club_name', 'referee', 'position', 'stadium']:
         if col in train_df.columns:
             cols_to_encode.append(col)
             
@@ -96,6 +100,9 @@ def main():
         # Add target encoding columns back to train features
         for col in cols_to_encode:
             train_feat[f'{col}_target_enc'] = train_feat_encoded[f'{col}_target_enc']
+            
+        # Player scoring efficiency per shot
+        train_feat['scoring_rate_per_shot'] = train_feat['name_y_target_enc'] / (train_feat['avg_shots'] + 1e-5)
             
     # Drop columns that are IDs, strings, or target column
     cols_to_drop = ['appearance_id', 'name_y', target_col, 'date']
@@ -115,6 +122,7 @@ def main():
     # Increase n_trials for better performance.
     best_lgb_params = tune_lgbm_with_optuna(X_train, y_train, cat_cols=pipeline.cat_cols, n_trials=5, random_state=42)
     best_cat_params = tune_catboost_with_optuna(X_train, y_train, cat_cols=pipeline.cat_cols, n_trials=5, random_state=42)
+    best_xgb_params = tune_xgboost_with_optuna(X_train, y_train, cat_cols=pipeline.cat_cols, n_trials=5, random_state=42)
     
     # 6. Train Models with Optimal Parameters
     oof_lgb, test_lgb, lgb_models, lgb_ap = train_lgbm(
@@ -132,11 +140,22 @@ def main():
         n_splits=5, 
         random_state=42
     )
+
+    oof_xgb, test_xgb, xgb_models, xgb_ap = train_xgboost(
+        X_train, y_train, X_test,
+        cat_cols=pipeline.cat_cols,
+        params=best_xgb_params,
+        n_splits=5,
+        random_state=42
+    )
+    
+    # Save feature names to pipeline so we can align columns at inference time in the app
+    pipeline.feature_names = features_to_use
     
     # 7. Ensemble Blending
-    oof_blend, test_blend, blend_weight = blend_predictions(
-        oof_lgb, oof_cat, 
-        test_lgb, test_cat, 
+    oof_blend, test_blend, blend_weights = blend_predictions(
+        oof_lgb, oof_cat, oof_xgb,
+        test_lgb, test_cat, test_xgb,
         y_train
     )
     

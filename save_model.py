@@ -9,7 +9,7 @@ from catboost import CatBoostClassifier, Pool
 from src.features import FeaturePipeline, generate_out_of_fold_target_encoding
 
 def main():
-    workspace_dir = "/Users/rana/OFF SIDE"
+    workspace_dir = "/Users/ashwanikumar/code/Goal scoring probability ML/probabiltiy code/offside-football-prediction"
     train_path = os.path.join(workspace_dir, 'train.csv')
     
     print("Loading training data...")
@@ -24,7 +24,7 @@ def main():
     print("Generating target encodings...")
     skf = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
     cols_to_encode = []
-    for col in ['name_y', 'home_club_name', 'away_club_name']:
+    for col in ['name_y', 'home_club_name', 'away_club_name', 'referee', 'position', 'stadium']:
         if col in train_df.columns:
             cols_to_encode.append(col)
             
@@ -32,6 +32,9 @@ def main():
         train_feat_encoded = generate_out_of_fold_target_encoding(train_df, skf, target_col=target_col, cols_to_encode=cols_to_encode)
         for col in cols_to_encode:
             train_feat[f'{col}_target_enc'] = train_feat_encoded[f'{col}_target_enc']
+            
+        # Player scoring efficiency per shot
+        train_feat['scoring_rate_per_shot'] = train_feat['name_y_target_enc'] / (train_feat['avg_shots'] + 1e-5)
             
     # Drop columns that are IDs, strings, or target column
     cols_to_drop = ['appearance_id', 'name_y', target_col, 'date']

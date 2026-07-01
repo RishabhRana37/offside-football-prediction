@@ -23,6 +23,16 @@ class FeaturePipeline:
         """
         df = train_df.copy()
         
+        # Calculate historical club goal statistics
+        if 'home_club_goals' in train_df.columns and 'away_club_goals' in train_df.columns:
+            self.home_club_goals_dict = train_df.groupby('home_club_name')['home_club_goals'].mean().to_dict()
+            self.away_club_goals_dict = train_df.groupby('away_club_name')['away_club_goals'].mean().to_dict()
+            self.home_club_conceded_dict = train_df.groupby('home_club_name')['away_club_goals'].mean().to_dict()
+            self.away_club_conceded_dict = train_df.groupby('away_club_name')['home_club_goals'].mean().to_dict()
+            self.global_home_goals = train_df['home_club_goals'].mean()
+            self.global_away_goals = train_df['away_club_goals'].mean()
+
+        
         # Convert boolean and flag columns to 1/0 integers
         bool_cols = [
             'full_match_flag', 'starter_flag', 'substitute_flag', 
@@ -76,7 +86,11 @@ class FeaturePipeline:
             self.global_target_means['name_y'] = train_df.groupby('name_y')[target_col].mean().to_dict()
             self.global_target_means['home_club_name'] = train_df.groupby('home_club_name')[target_col].mean().to_dict()
             self.global_target_means['away_club_name'] = train_df.groupby('away_club_name')[target_col].mean().to_dict()
+            self.global_target_means['referee'] = train_df.groupby('referee')[target_col].mean().to_dict()
+            self.global_target_means['position'] = train_df.groupby('position')[target_col].mean().to_dict()
+            self.global_target_means['stadium'] = train_df.groupby('stadium')[target_col].mean().to_dict()
             self.global_target_means['global_mean'] = train_df[target_col].mean()
+
 
         return df
 
@@ -137,6 +151,13 @@ class FeaturePipeline:
         df['name_y_target_enc'] = df['name_y'].map(self.global_target_means.get('name_y', {})).fillna(global_mean)
         df['home_club_name_target_enc'] = df['home_club_name'].map(self.global_target_means.get('home_club_name', {})).fillna(global_mean)
         df['away_club_name_target_enc'] = df['away_club_name'].map(self.global_target_means.get('away_club_name', {})).fillna(global_mean)
+        df['referee_target_enc'] = df['referee'].map(self.global_target_means.get('referee', {})).fillna(global_mean)
+        df['position_target_enc'] = df['position'].map(self.global_target_means.get('position', {})).fillna(global_mean)
+        df['stadium_target_enc'] = df['stadium'].map(self.global_target_means.get('stadium', {})).fillna(global_mean)
+        
+        # Player scoring efficiency per shot
+        df['scoring_rate_per_shot'] = df['name_y_target_enc'] / (df['avg_shots'] + 1e-5)
+
 
         return df
 
@@ -203,7 +224,19 @@ class FeaturePipeline:
         if 'is_attacker' in df.columns:
             df['attacker_value'] = df['is_attacker'] * df.get('market_value_before_match', 0)
 
+        # 6. Historical Club Strengths
+        if hasattr(self, 'home_club_goals_dict'):
+            df['home_club_avg_goals_scored'] = df['home_club_name'].map(self.home_club_goals_dict).fillna(self.global_home_goals)
+            df['away_club_avg_goals_scored'] = df['away_club_name'].map(self.away_club_goals_dict).fillna(self.global_away_goals)
+            df['home_club_avg_goals_conceded'] = df['home_club_name'].map(self.home_club_conceded_dict).fillna(self.global_away_goals)
+            df['away_club_avg_goals_conceded'] = df['away_club_name'].map(self.away_club_conceded_dict).fillna(self.global_home_goals)
+            
+            # Combine strengths to get match expectation
+            df['match_expected_home_goals'] = df['home_club_avg_goals_scored'] * df['away_club_avg_goals_conceded']
+            df['match_expected_away_goals'] = df['away_club_avg_goals_scored'] * df['home_club_avg_goals_conceded']
+
         return df
+
 
 
 def generate_out_of_fold_target_encoding(train_df, kfold, target_col='scored_flag', cols_to_encode=['name_y', 'home_club_name', 'away_club_name']):
